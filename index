@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Landsat 12 Tuiles - Géoréférencement Manuel</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; height: 100vh; font-family: Arial; }
+        #map { width: 100%; height: 100vh; }
+        .info {
+            position: absolute; top: 10px; left: 10px; z-index: 1000;
+            background: white; padding: 10px; border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <strong>Landsat - 12 Tuiles</strong><br>
+        <span id="status">Chargement...</span>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        // Initialisation carte
+        const map = L.map('map');
+        const status = document.getElementById('status');
+
+        // Fond OSM
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // === COORDONNÉES EXACTES DE VOTRE IMAGE ===
+        const fullBounds = [
+            [45.5859332, 12.1699431],  // Nord-Ouest
+            [45.4005451, 12.4736074]   // Sud-Est
+        ];
+
+        // Calcul des dimensions de chaque tuile
+        const latDiff = fullBounds[0][0] - fullBounds[1][0]; // 0.1853881
+        const lngDiff = fullBounds[1][1] - fullBounds[0][1]; // 0.3036643
+        
+        const tileHeight = latDiff / 3;  // 0.061796033
+        const tileWidth = lngDiff / 4;   // 0.075916075
+
+        let loadedTiles = 0;
+        const totalTiles = 12;
+
+        // Afficher les 12 tuiles avec géoréférencement MANUEL
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 4; col++) {
+                // Calcul des coordonnées exactes de chaque tuile
+                const north = fullBounds[0][0] - (row * tileHeight);
+                const south = fullBounds[0][0] - ((row + 1) * tileHeight);
+                const west = fullBounds[0][1] + (col * tileWidth);
+                const east = fullBounds[0][1] + ((col + 1) * tileWidth);
+                
+                const tileBounds = [[north, west], [south, east]];
+                const tileNumber = (row * 4) + col + 1;
+                
+                // CHEMIN POUR GITHUB
+                const imageUrl = `tuiles/${tileNumber}.png`;
+                
+                const tileLayer = L.imageOverlay(imageUrl, tileBounds).addTo(map);
+                
+                // Vérification du chargement
+                tileLayer.on('load', function() {
+                    loadedTiles++;
+                    status.textContent = `Tuiles: ${loadedTiles}/${totalTiles}`;
+                    console.log(`✅ Tuile ${tileNumber} chargée:`, tileBounds);
+                    
+                    if (loadedTiles === totalTiles) {
+                        status.textContent = `✅ Toutes les tuiles chargées (${loadedTiles}/${totalTiles})`;
+                        status.style.color = 'green';
+                    }
+                });
+                
+                tileLayer.on('error', function() {
+                    console.log(`❌ Erreur tuile ${tileNumber}`);
+                });
+            }
+        }
+
+        // Centrer sur l'image complète
+        map.fitBounds(fullBounds);
+        
+        // Contrôles
+        L.control.scale({imperial: false}).addTo(map);
+        L.control.fullscreen().addTo(map);
+
+        console.log("Géoréférencement calculé:");
+        console.log("Tile Height:", tileHeight);
+        console.log("Tile Width:", tileWidth);
+
+    </script>
+</body>
+</html>
