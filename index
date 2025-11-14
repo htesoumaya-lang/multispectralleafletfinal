@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Landsat Multispectral - Visualisation</title>
+    <title>Landsat Multispectral - 12 Tuiles</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -10,7 +10,7 @@
             padding: 0; 
             height: 100vh; 
             font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: #1e3c72;
         }
         #map { 
             width: 100%; 
@@ -26,17 +26,6 @@
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             border-left: 5px solid #2a5298;
-            max-width: 300px;
-        }
-        .header h1 {
-            margin: 0 0 5px 0;
-            color: #2a5298;
-            font-size: 18px;
-        }
-        .header p {
-            margin: 0;
-            color: #666;
-            font-size: 12px;
         }
         .status {
             position: absolute;
@@ -44,20 +33,20 @@
             left: 20px;
             z-index: 1000;
             background: rgba(255, 255, 255, 0.95);
-            padding: 10px 15px;
+            padding: 12px 15px;
             border-radius: 8px;
             font-size: 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
+        .success { color: #27ae60; font-weight: bold; }
         .loading { color: #e67e22; }
-        .success { color: #27ae60; }
         .error { color: #e74c3c; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🛰️ Landsat Multispectral</h1>
-        <p>Italie du Nord - 12 tuiles RGB<br>Dimensions: 791×655 pixels</p>
+        <h2 style="margin:0 0 5px 0; color: #2a5298;">🛰️ Landsat Multispectral</h2>
+        <p style="margin:0; color: #666; font-size: 13px;">Italie du Nord - 12 tuiles RGB</p>
     </div>
     
     <div id="map"></div>
@@ -67,7 +56,7 @@
     </div>
 
     <script>
-        // Initialisation de la carte centrée sur l'Italie
+        // Initialisation de la carte
         const map = L.map('map', {
             center: [45.493, 12.321],
             zoom: 11,
@@ -76,31 +65,32 @@
 
         // Fond de carte OSM
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-            maxZoom: 19
+            attribution: '© OpenStreetMap',
+            maxZoom: 18
         }).addTo(map);
 
-        // === COORDONNÉES EXACTES DE VOTRE IMAGE LANDSAT ===
+        // === COORDONNÉES EXACTES ===
         const fullBounds = [
             [45.5859332, 12.1699431],  // Nord-Ouest
             [45.4005451, 12.4736074]   // Sud-Est
         ];
 
-        // Calcul des dimensions de chaque tuile
-        const latDiff = fullBounds[0][0] - fullBounds[1][0];
-        const lngDiff = fullBounds[1][1] - fullBounds[0][1];
+        // Calcul des dimensions des tuiles
+        const latDiff = fullBounds[0][0] - fullBounds[1][0]; // 0.1853881
+        const lngDiff = fullBounds[1][1] - fullBounds[0][1]; // 0.3036643
         
-        const tileHeight = latDiff / 3;
-        const tileWidth = lngDiff / 4;
+        const tileHeight = latDiff / 3;  // 0.061796033
+        const tileWidth = lngDiff / 4;   // 0.075916075
 
         let loadedTiles = 0;
         let errorTiles = 0;
         const totalTiles = 12;
         const status = document.getElementById('status');
 
-        // Afficher les 12 tuiles Landsat
+        // Afficher les 12 tuiles (1.png à 12.png)
         for (let row = 0; row < 3; row++) {
             for (let col = 0; col < 4; col++) {
+                // Calcul des coordonnées exactes
                 const north = fullBounds[0][0] - (row * tileHeight);
                 const south = fullBounds[0][0] - ((row + 1) * tileHeight);
                 const west = fullBounds[0][1] + (col * tileWidth);
@@ -109,23 +99,19 @@
                 const tileBounds = [[north, west], [south, east]];
                 const tileNumber = (row * 4) + col + 1;
                 
-                // CHEMIN CORRECT POUR GITHUB - VÉRIFIEZ LE NOM DU DOSSIER
-                const imageUrl = `tiles/${tileNumber}.png`;
+                // CHEMIN DIRECT - les images sont à la racine
+                const imageUrl = `${tileNumber}.png`;
                 
                 const tileLayer = L.imageOverlay(imageUrl, tileBounds, {
                     opacity: 0.9,
                     interactive: true
                 }).addTo(map);
                 
-                // Popup d'information pour chaque tuile
+                // Popup d'information
                 tileLayer.bindPopup(`
-                    <div style="text-align: center;">
+                    <div style="text-align: center; padding: 8px;">
                         <b>Tuile ${tileNumber}</b><br>
-                        Position: ${row+1}×${col+1}<br>
-                        Nord: ${north.toFixed(6)}<br>
-                        Sud: ${south.toFixed(6)}<br>
-                        Ouest: ${west.toFixed(6)}<br>
-                        Est: ${east.toFixed(6)}
+                        Position: Ligne ${row+1}, Colonne ${col+1}
                     </div>
                 `);
 
@@ -140,10 +126,6 @@
                     errorTiles++;
                     updateStatus();
                     console.error(`❌ Erreur tuile ${tileNumber}: ${imageUrl}`);
-                    
-                    // Afficher un placeholder en cas d'erreur
-                    this.setOpacity(0.3);
-                    this.getElement().style.backgroundColor = '#ffebee';
                 });
             }
         }
@@ -160,39 +142,32 @@
             }
         }
 
-        // Ajuster la vue sur l'image Landsat
+        // Centrer sur l'image
         map.fitBounds(fullBounds);
 
-        // Ajouter un cadre autour de l'image Landsat
+        // Cadre rouge autour de l'image
         L.rectangle(fullBounds, {
             color: '#e74c3c',
             weight: 3,
-            fillOpacity: 0,
-            dashArray: '5, 5'
-        }).addTo(map).bindPopup('🛰️ <b>Emprise Landsat Multispectral</b><br>Italie du Nord - Composition RGB');
+            fillOpacity: 0
+        }).addTo(map).bindPopup('🛰️ <b>Emprise Landsat</b><br>Italie du Nord');
 
         // Contrôles
-        L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
-        
-        // Contrôle plein écran
-        L.control.fullscreen({
-            position: 'topright',
-            title: 'Plein écran',
-            titleCancel: 'Quitter le plein écran'
-        }).addTo(map);
+        L.control.scale({ imperial: false }).addTo(map);
+        L.control.fullscreen().addTo(map);
 
-        // Vérification après 3 secondes
+        // Vérification finale
         setTimeout(() => {
             if (loadedTiles === 0) {
-                status.innerHTML = `<span class="error">❌ Aucune tuile chargée. Vérifiez le dossier 'tiles/' sur GitHub.</span>`;
+                status.innerHTML = `<span class="error">❌ Aucune tuile chargée. Vérifiez que 1.png à 12.png sont bien uploadés.</span>`;
             }
-        }, 3000);
+        }, 5000);
 
-        // Debug info
-        console.log('=== DEBUG INFORMATION ===');
+        // Debug
+        console.log('=== CONFIGURATION ===');
+        console.log('Images attendues: 1.png à 12.png');
         console.log('Bounds:', fullBounds);
         console.log('Tile dimensions:', { tileWidth, tileHeight });
-        console.log('Expected image URLs: tiles/1.png to tiles/12.png');
 
     </script>
 </body>
